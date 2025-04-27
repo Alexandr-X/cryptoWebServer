@@ -27,7 +27,7 @@ app.use(express.json());
 
 io.on("connection", (socket) => {
   socket.on("registr", async (data) => {
-    const arrOfUsersEmail = await supabase.from("test").select("*");
+    const arrOfUsersEmail = await supabase.from("userData").select("email");
     console.log(arrOfUsersEmail);
     const arrofSameEmail = arrOfUsersEmail.data.filter(
       (item) => item.email == data.email
@@ -42,6 +42,23 @@ io.on("connection", (socket) => {
         },
       ]);
       socket.emit("isCorrectReg", true);
+    } else socket.emit("isCorrectReg", false);
+  });
+  socket.on("isCorrectLogin", async (data) => {
+    const arrOfUsersEmail = await supabase
+      .from("userData")
+      .select("email,password");
+    const arrofSameEmail = arrOfUsersEmail.data.filter(
+      (item) => item.email == data.email
+    );
+    if (arrofSameEmail.length === 1) {
+      if (arrofSameEmail[0].password === data.password) {
+        socket.emit("isCorrectReg", true);
+      } else {
+        socket.emit("isCorrectReg", false);
+      }
+    } else {
+      socket.emit("isCorrectReg", false);
     }
   });
 });
