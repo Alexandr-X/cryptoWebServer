@@ -26,6 +26,7 @@ app.use(cors());
 app.use(express.json());
 
 io.on("connection", (socket) => {
+  console.log("1");
   socket.on("registr", async (data) => {
     const arrOfUsersEmail = await supabase.from("userData").select("email");
     console.log(arrOfUsersEmail);
