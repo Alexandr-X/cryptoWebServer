@@ -27,18 +27,20 @@ app.use(express.json());
 
 io.on("connection", (socket) => {
   socket.on("registr", async (data) => {
-    const arrOfUsersEmail = await supabase.from("userData").select("email");
+    const arrOfUsersEmail = await supabase.from("test").select("*");
+    console.log(arrOfUsersEmail);
     const arrofSameEmail = arrOfUsersEmail.data.filter(
-      (item) => item == data.email
+      (item) => item.email == data.email
     );
     if (arrofSameEmail.length === 0) {
-      supabase
-        .from("userData")
-        .insert({
+      await supabase.from("userData").insert([
+        {
           name: data.name,
           email: data.email,
           password: data.password,
-        });
+          logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTAlg1-ZKpUt0a2506DkhjtkH8zHdDtnyUySA&s",
+        },
+      ]);
       socket.emit("isCorrectReg", true);
     }
   });
