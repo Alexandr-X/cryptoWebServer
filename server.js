@@ -1,0 +1,120 @@
+import express from "express";
+import "dotenv/config";
+import { createServer } from "node:http";
+import cors from "cors";
+import { Server } from "socket.io";
+import { createClient } from "@supabase/supabase-js";
+
+// const supabaseUrl = process.env.SUPABASE_URL;
+// const supabaseKey = process.env.SUPABASE_KEY;
+const supabaseUrl = "https://rvtgpibsbmbokrcjydko.supabase.co";
+const supabaseKey =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ2dGdwaWJzYm1ib2tyY2p5ZGtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU1MDc0ODYsImV4cCI6MjA2MTA4MzQ4Nn0.2nZ0Ytr2HR2IxIGe8D0w5q9zW0kk0kQQaRKogO-NkBE";
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error("Please set SUPABASE_URL and SUPABASE_KEY in your .env file.");
+  process.exit(1);
+}
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+const app = express();
+const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+});
+app.use(cors());
+app.use(express.json());
+
+io.on("connection", socket => {
+  socket.on("registr", async data => {
+    console.log(data);
+    const arrOfUsersEmail = await supabase.from("userData").select("email");
+    console.log(arrOfUsersEmail);
+    const arrofSameEmail = arrOfUsersEmail.data.filter(
+      item => item.email == data.email
+    );
+    if (arrofSameEmail.length === 0) {
+      await supabase.from("userData").insert([
+        {
+          name: data.name,
+          email: data.email,
+          password: data.password,
+          logo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTAlg1-ZKpUt0a2506DkhjtkH8zHdDtnyUySA&s",
+        },
+      ]);
+      socket.emit("isCorrectReg", true);
+    } else socket.emit("isCorrectReg", false);
+  });
+  socket.on("isCorrectLogin", async data => {
+    console.log(data);
+    const arrOfUsersEmail = await supabase
+      .from("userData")
+      .select("email,password");
+    const arrofSameEmail = arrOfUsersEmail.data.filter(
+      item => item.email == data.email
+    );
+    if (arrofSameEmail.length === 1) {
+      if (arrofSameEmail[0].password === data.password) {
+        socket.emit("isCorrectReg", true);
+      } else {
+        socket.emit("isCorrectReg", false);
+      }
+    } else {
+      socket.emit("isCorrectReg", false);
+    }
+  });
+  socket.on("getAddInform", async email => {
+    const arrOfuserInf = await supabase
+      .from("userData")
+      .select("email,wallet,logo,arrOfBoughts,arrOfPinCrpt");
+    console.log(arrOfuserInf.data, "asd");
+    const userInf = arrOfuserInf.data.filter(item => item.email === email);
+    console.log(userInf, "ffff");
+    if (userInf.length) {
+      socket.emit("giveAddInform", {
+        logo: userInf[0].logo,
+        money: userInf[0].wallet,
+        arr: userInf[0].arrOfBoughts,
+        arrOfPin: userInf[0].arrOfPinCrpt,
+      });
+    } else {
+      socket.emit("giveAddInform", {
+        logo: "",
+        money: 0,
+        arr: "",
+        arrOfPin: "",
+      });
+    }
+  });
+  socket.on("changeLogo", async user => {
+    await supabase
+      .from("userData")
+      .update({ logo: user.logo })
+      .eq("email", user.email);
+  });
+  socket.on("changeMoney", async user => {
+    await supabase
+      .from("userData")
+      .update({ wallet: user.wallet })
+      .eq("email", user.email);
+  });
+  socket.on("updArrofBoughts", async user => {
+    await supabase
+      .from("userData")
+      .update({ arrOfBoughts: user.arr })
+      .eq("email", user.email);
+  });
+  socket.on("udpArrOfPinCrpt", async userArr => {
+    await supabase
+      .from("userData")
+      .update({ arrOfPinCrpt: userArr.arr })
+      .eq("email", userArr.email);
+  });
+});
+
+server.listen(5000, () => {
+  console.log("------server listening on port 5000-------");
+});
